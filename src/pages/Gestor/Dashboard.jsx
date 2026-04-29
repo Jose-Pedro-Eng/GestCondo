@@ -6,14 +6,17 @@ import { motion } from 'motion/react';
 export default function DashboardGestor() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function loadData() {
       try {
         const response = await api.get('/dashboard/gestor');
+        console.log('Dashboard Data:', response.data);
         setData(response.data);
       } catch (err) {
-        console.error(err);
+        console.error('Erro no Dashboard:', err);
+        setError('Não foi possível carregar os dados do painel.');
       } finally {
         setLoading(false);
       }
@@ -21,12 +24,22 @@ export default function DashboardGestor() {
     loadData();
   }, []);
 
-  if (loading) return <div className="p-8">Carregando...</div>;
+  if (loading) return <div className="p-8 flex items-center gap-2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div> Carregando painel...</div>;
+
+  if (error) return (
+    <div className="p-8 text-red-600 bg-red-50 rounded-xl border border-red-100 m-8">
+      <h2 className="font-bold text-lg">Erro</h2>
+      <p>{error}</p>
+      <button onClick={() => window.location.reload()} className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Tentar Novamente</button>
+    </div>
+  );
+
+  if (!data) return null;
 
   const stats = [
-    { label: 'Moradores Ativos', value: data.totalMoradores, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Unidades Ocupadas', value: data.unidadesOcupadas, icon: Hotel, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Unidades Vagas', value: data.unidadesVagas, icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Moradores Ativos', value: data.totalMoradores || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Unidades Ocupadas', value: data.unidadesOcupadas || 0, icon: Hotel, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Unidades Vagas', value: data.unidadesVagas || 0, icon: ShieldAlert, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   return (
@@ -73,7 +86,7 @@ export default function DashboardGestor() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.contratosVencendo.length === 0 ? (
+              {(!data.contratosVencendo || data.contratosVencendo.length === 0) ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-slate-400 italic">
                     Nenhum contrato vencendo nos próximos 30 dias.

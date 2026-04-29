@@ -118,13 +118,13 @@ class FinanceiroController {
         }
       });
 
-      const pagos = await LancamentoFinanceiro.count({ where: { status: 'pago' } });
-      const pendentes = await LancamentoFinanceiro.count({ where: { status: 'pendente' } });
+      const pagos = await LancamentoFinanceiro.count({ where: { status: 'pago' } }) || 0;
+      const pendentes = await LancamentoFinanceiro.count({ where: { status: 'pendente' } }) || 0;
 
       return res.json({
-        totalAReceber,
-        totalEmAtraso,
-        inadimplentesCount,
+        totalAReceber: Number(totalAReceber) || 0,
+        totalEmAtraso: Number(totalEmAtraso) || 0,
+        inadimplentesCount: inadimplentesCount || 0,
         statsPizza: { pagos, pendentes }
       });
     } catch (err) {

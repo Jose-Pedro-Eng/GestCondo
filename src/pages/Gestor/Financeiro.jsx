@@ -8,6 +8,7 @@ export default function FinanceiroGestor() {
   const [lancamentos, setLancamentos] = useState([]);
   const [moradores, setMoradores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -21,16 +22,20 @@ export default function FinanceiroGestor() {
 
   async function loadData() {
     try {
+      setLoading(true);
       const [resStats, resLancamentos, resMoradores] = await Promise.all([
         api.get('/dashboard/financeiro'),
         api.get('/financeiro'),
         api.get('/moradores')
       ]);
+      console.log('Financeiro Stats:', resStats.data);
       setStats(resStats.data);
-      setLancamentos(resLancamentos.data);
-      setMoradores(resMoradores.data);
+      setLancamentos(resLancamentos.data || []);
+      setMoradores(resMoradores.data || []);
+      setError(null);
     } catch (err) {
-      console.error(err);
+      console.error('Erro no Financeiro:', err);
+      setError('Erro ao carregar dados financeiros. Verifique as permissões.');
     } finally {
       setLoading(false);
     }
@@ -57,12 +62,26 @@ export default function FinanceiroGestor() {
     }
   };
 
-  if (loading) return <div className="p-8">Carregando...</div>;
+  if (loading) return <div className="p-8 flex items-center gap-2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div> Carregando dados financeiros...</div>;
+
+  if (error) return (
+    <div className="p-8 text-red-600 bg-red-50 rounded-xl border border-red-100 m-8">
+      <h2 className="font-bold text-lg">Erro</h2>
+      <p>{error}</p>
+      <button onClick={() => loadData()} className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Tentar Novamente</button>
+    </div>
+  );
+
+  if (!stats) return (
+    <div className="p-8 text-slate-500 bg-slate-50 rounded-xl border border-slate-100 m-8">
+      Nenhum dado financeiro disponível.
+    </div>
+  );
 
   const cards = [
-    { label: 'A Receber (Mês)', value: stats.totalAReceber, icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Total em Atraso', value: stats.totalEmAtraso, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Inadimplentes', value: stats.inadimplentesCount, icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'A Receber (Mês)', value: stats.totalAReceber || 0, icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Total em Atraso', value: stats.totalEmAtraso || 0, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Inadimplentes', value: stats.inadimplentesCount || 0, icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   return (
@@ -118,11 +137,11 @@ export default function FinanceiroGestor() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {lancamentos.filter(l => l.Morador.nome.toLowerCase().includes(searchTerm.toLowerCase())).map((l) => (
+              {lancamentos.filter(l => l.Morador?.nome?.toLowerCase().includes(searchTerm.toLowerCase())).map((l) => (
                 <tr key={l.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4">
-                    <div className="font-semibold text-slate-800">{l.Morador.nome}</div>
-                    <div className="text-xs text-slate-500">Bloco {l.Morador.Unidade?.bloco} - {l.Morador.Unidade?.numero}</div>
+                    <div className="font-semibold text-slate-800">{l.Morador?.nome || 'Morador Removido'}</div>
+                    <div className="text-xs text-slate-500">Bloco {l.Morador?.Unidade?.bloco || '?'} - {l.Morador?.Unidade?.numero || '?'}</div>
                   </td>
                   <td className="px-6 py-4 font-mono font-bold">R$ {Number(l.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   <td className="px-6 py-4">{new Date(l.vencimento).toLocaleDateString()}</td>

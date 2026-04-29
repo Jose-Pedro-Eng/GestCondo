@@ -2,15 +2,14 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.join(process.cwd(), '.env') });
+dotenv.config();
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const dialect = process.env.DB_DIALECT || 'sqlite';
 
-// Usando SQLite para o ambiente de preview do AI Studio, mas preparado para MySQL
-const sequelize = process.env.DB_DIALECT === 'sqlite' 
+const sequelize = dialect === 'sqlite' 
   ? new Sequelize({
       dialect: 'sqlite',
-      storage: process.env.DB_STORAGE || './backend/database/database.sqlite',
+      storage: process.env.DB_STORAGE || './database.sqlite',
       logging: false
     })
   : new Sequelize(

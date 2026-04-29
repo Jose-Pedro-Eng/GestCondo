@@ -32,19 +32,21 @@ async function startServer() {
 
   // Sync DB and create default Gestor if not exists
   await sequelize.sync();
-  const adminExists = await Usuario.findOne({ where: { perfil: 'Gestor' } });
-  let gestorId = null;
+  const adminEmail = 'admin@unicondo.com';
+  const adminExists = await Usuario.findOne({ where: { email: adminEmail } });
+  
+  const hashSenha = await bcrypt.hash('admin123', 8);
   if (!adminExists) {
-    const hashSenha = await bcrypt.hash('admin123', 8);
-    const gestor = await Usuario.create({
-      email: 'admin@unicondo.com',
+    await Usuario.create({
+      email: adminEmail,
       senha: hashSenha,
       perfil: 'Gestor'
     });
-    gestorId = gestor.id;
-    console.log('Default Gestor created: admin@unicondo.com / admin123');
+    console.log(`[DB] Administrador padrão criado: ${adminEmail} / admin123`);
   } else {
-    gestorId = adminExists.id;
+    // Forçar reset da senha para garantir que seja admin123
+    await adminExists.update({ senha: hashSenha });
+    console.log(`[DB] Administrador validado/resetado: ${adminEmail} / admin123`);
   }
 
   // Socket.IO
@@ -52,7 +54,8 @@ async function startServer() {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error('Authentication error'));
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const secret = process.env.JWT_SECRET || 'fallback_secret';
+      const decoded = jwt.verify(token, secret);
       socket.user = decoded;
       next();
     } catch (err) {
